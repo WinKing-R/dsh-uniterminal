@@ -1,0 +1,1046 @@
+/* 样式以字符串内联进 lib/client.js，运行时注入 <style data-plugin-css>；
+   与真实插件 @linxin666/dsh-ssh / dsh-better-sidebar 的做法一致。
+   本文件名沿用计划，但类名不做哈希（计划里的 TSX 用的就是这些全局类名）。 */
+
+.uniterminal-pane {
+  /* ===== 设计令牌 =====
+     作用域必须留在 .uniterminal-pane，不能写 :root：这段 CSS 是以 <style> 注入**宿主页面**的，
+     :root 会污染宿主与其它插件。自定义属性会继承，面板内所有子元素都能用。 */
+  /* 字号三级阶梯（台账硬规格）：按钮/小字 13，正文·标签·输入 14，分组标题·面板标题 16 */
+  --ut-font-sm: 13px;
+  --ut-font-md: 14px;
+  --ut-font-lg: 16px;
+  --ut-weight-title: 650;
+  --ut-weight-strong: 600;
+  /* 间距四档：只给文件末尾的布局原语用，既有规则的间距本段一律不动 */
+  --ut-space-1: 4px;
+  --ut-space-2: 8px;
+  --ut-space-3: 12px;
+  --ut-space-4: 16px;
+  /* 圆角：原来 6 种（4 / 6 / 8 / 10 / 12 / 999），收敛成 4 种 */
+  --ut-radius-sm: 4px;
+  --ut-radius-md: 6px;
+  --ut-radius-lg: 10px;
+  --ut-radius-pill: 999px;
+  /* 表格列宽：SFTP 与隧道两张表共用同一组宽度。
+     数值来自两张表的实测列宽（名称/目标列是弹性列，不在这里）。 */
+  --ut-col-size: 88px;
+  --ut-col-mtime: 132px;
+  --ut-col-actions: 52px;
+  --ut-col-mode: 104px;
+  --ut-col-local: 150px;
+  --ut-col-state: 56px;
+  /* 灰阶：与改动前的 α 逐个对应，像素不变 */
+  --ut-gray-60: rgba(128, 128, 128, 0.6);
+  --ut-gray-35: rgba(128, 128, 128, 0.35);
+  --ut-gray-34: rgba(128, 128, 128, 0.34);
+  --ut-gray-28: rgba(128, 128, 128, 0.28);
+  --ut-gray-18: rgba(128, 128, 128, 0.18);
+  --ut-gray-16: rgba(128, 128, 128, 0.16);
+  --ut-gray-08: rgba(128, 128, 128, 0.08);
+  --ut-gray-25: rgba(128, 128, 128, 0.25); /* 进度条轨道 */
+  /* 遮罩与投影黑：5 个 α，与改动前的取值逐个对应 */
+  --ut-scrim-strong: rgba(0, 0, 0, 0.42); /* 确认弹框遮罩 */
+  --ut-scrim-38: rgba(0, 0, 0, 0.38);
+  --ut-scrim-35: rgba(0, 0, 0, 0.35);
+  --ut-scrim-32: rgba(0, 0, 0, 0.32);
+  --ut-scrim-12: rgba(0, 0, 0, 0.12);
+  /* 语义色：与 ts 侧 tokens.ts 同源，CSS 里用宿主变量兜底 */
+  --ut-danger: var(--dsw-alias-label-error, #e5534b);
+  --ut-success: var(--dsw-alias-label-success, #3fb950);
+  /* 面板级自适应边框色：由 currentColor 派生，浅色主题是淡墨、深色主题是淡白。
+     内联样式引用 var(--ut-border)，就不必在每个组件里写主题分支。
+     第一行给不支持 color-mix 的引擎兜底。 */
+  --ut-border: var(--ut-gray-35);
+  --ut-border: color-mix(in srgb, currentColor 22%, transparent);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+  padding: 12px 14px;
+  color: var(--dsw-alias-label-primary, inherit);
+  font-family: var(--dsw-font-family, system-ui, sans-serif);
+  /* 连接表单浮层用 absolute 贴住面板：没有定位上下文它会跑到视口上去 */
+  position: relative;
+}
+
+/* 提示段落：13px + 0.75 透明——三段里最低的一档，不再和标签同号 */
+.uniterminal-hint {
+  margin: 0;
+  font-size: var(--ut-font-sm);
+  opacity: 0.75;
+}
+
+/* 表单标签：比正文小一档 + 加粗——层级靠"字号差 + 字重差"建立，
+   之前标签、输入值、提示段落全是 14px，眼睛分不出主次。 */
+.uniterminal-pane label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--ut-font-sm);
+  font-weight: var(--ut-weight-strong);
+  opacity: 0.92;
+}
+
+.uniterminal-pane input {
+  padding: 4px 6px;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  /* 浅色主题下 #3a3a3a 这种深灰兜底会变成一圈硬描边（"线框图"感）。
+     改成由 currentColor 派生的半透明：深浅主题自动适配，不需要写分支。
+     第一行给不支持 color-mix 的引擎兜底。 */
+  border: 1px solid var(--ut-gray-35);
+  border-color: var(--ut-border);
+  border-radius: var(--ut-radius-sm);
+}
+
+.uniterminal-notice {
+  font-size: var(--ut-font-md);
+  color: var(--ut-danger);
+}
+
+/* 成功提示：上面的 .uniterminal-notice 默认是错误红，
+   而「已删除 X」「已导入 N 台主机」「已保存配置」这类**成功反馈**也用它，
+   红字只会被读成"出错了"。同特异度靠后写者胜，所以这条必须排在它后面。
+   取值与主机列表的 COLOR_SUCCESS 同一个宿主变量（明暗两套主题都不用分支）。 */
+.uniterminal-notice-ok {
+  color: var(--ut-success);
+}
+
+.uniterminal-terminal {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.uniterminal-terminal .xterm {
+  height: 100%;
+}
+
+/* 视图切换（终端/文件/隧道/外观）：只改字重看不出选中，这里给实体感——
+   选中项有底色 + 内阴影（像按下去），悬停有反馈，未选中降低不透明度。 */
+.uniterminal-viewtab {
+  /* ⚠ 本规则只负责会话栏/视图切换**特有**的那一件事：未选中时变暗（下面的 opacity），
+     选中态见 .uniterminal-viewtab[aria-pressed="true"]。
+     描边 / 背景 / 文字色 / 圆角 / 字号 / 行高 / 内边距 / 光标 / 过渡一律由
+     .uniterminal-pane button 统一决定：它是 (0,1,1)，本条只有 (0,1,0)，
+     在这里再写一遍就是一条**静默失效的死声明**。
+     B4 第四段一次删掉 10 条这样的声明——其中 padding: 2px 9px 从未生效过，
+     真实内边距一直是基础规则的 2px 10px（× 按钮走 .uniterminal-compact，是 2px 6px）。
+     将来若真要给会话栏独立外观，选择器必须抬到 (0,2,0) 以上
+     （例如 .uniterminal-pane button.uniterminal-viewtab），否则又会写成一条死规则。 */
+  opacity: 0.72;
+}
+
+.uniterminal-viewtab:hover {
+  opacity: 1;
+  background: var(--ut-gray-16);
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.uniterminal-viewtab:active {
+  background: var(--ut-gray-34);
+  background: color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.uniterminal-viewtab[aria-pressed="true"] {
+  opacity: 1;
+  font-weight: var(--ut-weight-strong);
+  color: var(--dsw-alias-label-primary, inherit);
+  background: var(--ut-gray-28);
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  border-color: var(--ut-gray-60);
+  border-color: color-mix(in srgb, currentColor 55%, transparent);
+  /* 原来这里是黑色内阴影：浅底上像一块脏污。改成"顶部内高光 + 极淡内阴影"，
+     由 currentColor 派生，深色主题是微亮边、浅色主题是微暗边。 */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 1px 2px var(--ut-scrim-12);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, currentColor 14%, transparent),
+    inset 0 1px 2px color-mix(in srgb, currentColor 10%, transparent);
+}
+
+/* 已记住密码时输入框的占位符：用绿色提示"已存好、直接连"，真正的口令永远不进浏览器。
+   placeholder 的颜色无法用内联样式设置，因此走类名。 */
+.uniterminal-masked::placeholder {
+  color: var(--ut-success);
+  opacity: 0.75;
+  letter-spacing: 1px;
+}
+
+/* 插件面板内的所有按钮（主机列表、连接表单、SFTP、隧道、状态栏…）：
+   与工具栏同一套药丸形，字号统一 13px（--ut-font-sm）。用容器类统一约束，避免逐个按钮写样式。
+   内联的 fontSize/padding 会盖过这里，因此那些按钮的内联样式已同步清掉。 */
+.uniterminal-pane button {
+  /* B4 第四段：这条规则原来写了两遍（后一遍的每条声明都压过前一遍）。合并后只留**生效**的值：
+     padding 2px 10px、border-radius 取药丸；align-self 与 font: inherit 是前一遍的独有声明，
+     上移到这里——font: inherit 必须排在 font-size 之前，否则简写会把字号又还原成继承值。 */
+  align-self: flex-start;
+  padding: 2px 10px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  /* 浅色主题下 #3a3a3a 这种深灰兜底会变成一圈硬描边（"线框图"感）。
+     改成由 currentColor 派生的半透明：深浅主题自动适配，不需要写分支。
+     第一行给不支持 color-mix 的引擎兜底。 */
+  border: 1px solid var(--ut-gray-35);
+  border-color: var(--ut-border);
+  /* 药丸形：按钮高约 19px，999px 会被浏览器收敛成半高，即完全圆头 */
+  border-radius: var(--ut-radius-pill);
+  /* 之前没有 font-size：按钮吃的是浏览器默认的 button 字号（约 13.3px）。
+     试过 11px / 10px 都偏小，最终落在阶梯最低档 13px（--ut-font-sm）——中文清晰、比默认略紧。 */
+  font-size: var(--ut-font-sm);
+  line-height: 1.5;
+  transition: background 120ms ease, opacity 120ms ease;
+}
+
+.uniterminal-pane button:hover:not(:disabled) {
+  background: var(--ut-gray-18);
+  background: color-mix(in srgb, currentColor 11%, transparent);
+}
+
+.uniterminal-pane button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* 输入框此前没有字号规则，吃的是浏览器默认（约 13.33px）——比旁边的标签(14px)和按钮(13px)都别扭。
+   统一到正文档；复选框和取色器排除，避免把控件本身撑变形。 */
+.uniterminal-pane input:not([type="checkbox"]):not([type="color"]):not([type="radio"]) {
+  font-size: var(--ut-font-md);
+  /* label 现在是 600，input 的 font: inherit 会跟着变粗，这里显式压回去 */
+  font-weight: 400;
+}
+
+.uniterminal-pane button.uniterminal-hostname:hover {
+  /* 悬停态统一画在整行上（见文件末尾 .uniterminal-hostrow:hover）：
+     按钮只到图标为止，若由它自己画，高亮就断在按钮边界，和右侧动作按钮"不连通"。 */
+  background: transparent;
+  border-color: transparent;
+}
+
+/* 主机名后面的 user@host:port 是次要信息：比主机名小一档 */
+
+.uniterminal-hostrow:hover button:not(.uniterminal-hostname),
+.uniterminal-hostrow:focus-within button:not(.uniterminal-hostname),
+.uniterminal-grouprow:hover button,
+.uniterminal-grouprow:focus-within button {
+  opacity: 1;
+  border-color: var(--ut-border);
+}
+
+.uniterminal-hostrow:hover button:not(.uniterminal-hostname):disabled,
+.uniterminal-grouprow:hover button:disabled {
+  opacity: 0.5;
+}
+
+/* 名称定宽（16ch）：让每一行的 user@host:port 落在同一条竖线上。
+   16ch 与 HOST_NAME_MAX=16 对应；超出用省略号，完整名字在 title 里。 */
+.uniterminal-pane .uniterminal-hostname-text {
+  display: inline-block;
+  width: 16ch;
+  flex: 0 0 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* 16ch：与 HOST_NAME_MAX=16 对应（名称上限也随之收窄）。 */
+
+/* 明细列定宽 16ch：明细长短不一，不定宽时图标与动作按钮会逐行浮动；
+   定宽后它们永远落在同一条竖线上。图标列本身不再定宽（见 .uniterminal-hosticons）。 */
+.uniterminal-pane .uniterminal-hostdetail {
+  /* 一条规则说清：定宽 16ch + 省略号 + 紧跟名称。
+     此前这里是三条同选择器的规则互相覆盖（定宽被 flex:1 1 auto 盖掉过），
+     正是"CSS 改了却不生效"的典型伏笔，已合并。 */
+  flex: 0 0 auto;
+  width: 16ch;
+  margin-left: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--ut-font-sm);
+  opacity: 0.65;
+}
+
+.uniterminal-pane .uniterminal-hosticons {
+  /* 不再定宽：宽度由图标自己决定。定宽（曾用 6ch / 4ch）会在只有一个图标时留下一截空白，
+     用户看就是"盾牌和钥匙之间空了一大块"。间距靠 gap，两个图标之间只有 2px。 */
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  margin-left: 3px;
+}
+
+/* 主机行里的主机名按钮：B4 第四段把本来写成 3 条的同选择器规则合并成这一条。
+   后两条压掉了前一条的 gap: 6px，合并只留生效的 gap: 0。 */
+.uniterminal-pane button.uniterminal-hostname {
+  /* 主机行里的主机名：正文档 14px + 600。
+     一行里"主机名 / root@… / 已记住"此前全是 13px，既没有主次，也比表单里的值小一档。
+     选择器带 .uniterminal-pane 前缀，才压得过 .uniterminal-pane button 里的 13px。 */
+  font-size: var(--ut-font-md);
+  font-weight: var(--ut-weight-strong);
+  padding: 3px 10px;
+  /* 主机行是**列表项**，不是输入框：不要常驻描边。
+     常驻边框会让一行看起来是"一个表单控件"，浅色主题下整页像线框图。
+     悬停时才浮出一道极淡的边，层级靠留白与字重表达。 */
+  border-color: transparent;
+  border-radius: var(--ut-radius-md);
+  /* 名称按钮内部改成 flex：名称定宽一格、明细可压缩并显示省略号。
+     之前是纯 inline 流——名称格 20ch 一占，明细就被按钮的 overflow:hidden 裁掉半截（实测截图如此）。 */
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  /* 间距全部由上面的 margin 决定，不再叠加 flex gap */
+  gap: 0;
+}
+
+/* 行占满宽度：靠右的动作按钮只有在行宽一致时才落在同一条竖线上。
+   之前行宽由内容撑开，带图标的那行更宽，按钮就右移了十几像素。 */
+.uniterminal-hostrow,
+.uniterminal-grouprow {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 悬停/聚焦画在**整行**上：从名称一直包到最右的「删除」，与动作按钮连成一体。
+   用 box-shadow 而不是 border 画 1px 轮廓——border 会挤动布局，阴影不会。 */
+.uniterminal-pane .uniterminal-hostrow:hover,
+.uniterminal-pane .uniterminal-hostrow:focus-within {
+  background: var(--ut-gray-08);
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  box-shadow: 0 0 0 1px var(--ut-gray-28);
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: var(--ut-radius-md);
+}
+
+/* ===== 浮层表面：不透明画布（原来写了 4 遍，合并成这一条）=====
+   玻璃/毛玻璃主题会把层色定义成**半透明**：直接用它会让背后的主机列表透上来，字看不清。
+   这里先铺一层不透明的 Canvas，再把主题色作为渐变叠上去——
+   主题色是透明时得到 Canvas + 主题色薄涂，是不透明时就是它本身；两种主题都不透底。
+   ⚠ .uniterminal-modal / .uniterminal-overlay-panel / .uniterminal-select-list /
+   .uniterminal-context-menu 这 4 条规则里**不要**再写 background-color / background-image：
+   它们唯一的来源就是这条分组规则。文字色仍由各自规则里的 color: inherit 决定。 */
+.uniterminal-modal,
+.uniterminal-overlay-panel,
+.uniterminal-select-list,
+.uniterminal-context-menu {
+  background-color: Canvas;
+  background-image: linear-gradient(var(--dsw-alias-bg-layer-2, transparent), var(--dsw-alias-bg-layer-2, transparent));
+}
+
+/* 确认弹框：fixed 相对视口，祖先的 overflow 裁不到它。
+   背景用宿主的层色变量，取不到时回落到系统色 Canvas（浅/深主题各自正确）。 */
+.uniterminal-modal-backdrop {
+  /* 铺满视口，**不带任何计算出来的坐标**。
+     踩过的两种错法：
+     ① fixed + 测量出的视口坐标：主题在祖先上加 transform/backdrop-filter 会给 fixed 造新包含块，
+        坐标被当成"相对祖先"，弹框跑到屏幕外（"点删除没反应"）；
+     ② absolute + inset:0：贴到了被主题撑得很大的祖先，弹框被推到窗口角落。
+     现在只有 inset:0 —— 有 transform 祖先就铺满那个祖先，没有就铺满视口，两种都不会跑偏。 */
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--ut-scrim-strong);
+}
+
+.uniterminal-modal {
+  width: min(320px, 100%);
+  box-sizing: border-box;
+  color: inherit;
+  border: 1px solid var(--ut-border);
+  border-radius: var(--ut-radius-lg);
+  padding: 16px;
+  box-shadow: 0 12px 32px var(--ut-scrim-35);
+  font-size: var(--ut-font-md);
+}
+
+.uniterminal-modal-title {
+  font-size: var(--ut-font-lg);
+  font-weight: var(--ut-weight-strong);
+  margin-bottom: 8px;
+}
+
+.uniterminal-modal-text {
+  font-size: var(--ut-font-sm);
+  opacity: 0.8;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.uniterminal-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* 危险操作的悬停态：平时与普通按钮无异（不抢注意力），
+   鼠标移上去立刻转红字 + 警示底色，提示"按下之后不可恢复"。
+   :not(:disabled) 保证禁用时不会出现"看起来能删"的假象。 */
+.uniterminal-pane button.uniterminal-danger-on-hover:hover:not(:disabled) {
+  color: var(--ut-danger);
+  background: color-mix(in srgb, var(--ut-danger) 16%, transparent);
+  border-color: color-mix(in srgb, var(--ut-danger) 45%, transparent);
+}
+
+/* 勾选行统一形态：横向排列、勾选框在左、标签紧随其后。
+   .uniterminal-pane label 默认是竖向（label 在上、输入框在下），
+   显式覆盖 flexDirection 才能得到"勾选框 + 文字"的横排；
+   四行（使用密码/使用私钥/记住密码/保存私钥路径）共用这一处，尺寸与过渡不再各写一份。 */
+.uniterminal-pane label.uniterminal-check {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--ut-font-md);
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 120ms ease;
+}
+
+.uniterminal-pane label.uniterminal-check input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--dsw-alias-brand-primary, currentColor);
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+
+/* 按下时轻微回弹：与全站按钮的"可点"反馈保持一致 */
+.uniterminal-pane label.uniterminal-check:active input[type="checkbox"]:not(:disabled) {
+  transform: scale(0.9);
+}
+
+/* 禁用态由 :has 判断，调用处不必各自写 opacity */
+.uniterminal-pane label.uniterminal-check:has(input:disabled) {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* 分组标题：历史数据里可能有超长名字（旧上限是 64），显示层也必须能收住。 */
+
+/* 分组标题定宽：与 NAME_MAX=16 对齐。
+   不限宽时，"ssh 导入" 和 "demo-group" 长度不同，后面的
+   「· N 台 / 颜色 / 清除颜色 / 重命名 / 删除分组」就会逐行左移，永远排不齐。 */
+.uniterminal-pane .uniterminal-group-title {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 16ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  /* 台账的三级阶梯里，分组标题是最高的 16px 档（此前一直是 13px，从未落地） */
+  font-size: var(--ut-font-lg);
+  font-weight: var(--ut-weight-title);
+}
+
+/* 连接表单浮层：占侧栏约八成宽，高度留出一圈边距，表单在面板内部滚动。
+   面板内的间距比整页时更紧，目的是让 12 个字段尽量一屏放下，而不是一进来就要滚。 */
+.uniterminal-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4%;
+  background: var(--ut-scrim-32);
+}
+
+.uniterminal-overlay-panel {
+  /* 四个浮层（连接 / 编辑 / 移入分组 / 新建分组）共用这一份规格：
+     之前面板没有 display/gap，子元素间距全靠各自默认值凑，三处各不相同。 */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 80%;
+  max-height: 92%;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: 1px solid var(--ut-border);
+  border-radius: var(--ut-radius-lg);
+  color: inherit;
+  box-shadow: 0 16px 40px var(--ut-scrim-38);
+}
+
+/* 面板标题：所有浮层的第一行 */
+.uniterminal-overlay-panel > div:first-child {
+  font-size: var(--ut-font-lg);
+  font-weight: var(--ut-weight-title);
+}
+
+/* 字段与控件：与既有 label/input 规则同源，只统一尺寸 */
+.uniterminal-overlay-panel label {
+  gap: 4px;
+  font-size: var(--ut-font-sm);
+  font-weight: var(--ut-weight-strong);
+  opacity: 0.92;
+}
+
+.uniterminal-overlay-panel input,
+.uniterminal-overlay-panel select {
+  padding: 5px 8px;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--ut-border);
+  border-radius: var(--ut-radius-sm);
+}
+
+.uniterminal-overlay-panel select {
+  /* 保留原生下拉箭头：上一版写了 appearance:none 却忘了补自定义箭头，
+     结果下拉框看起来就是一行纯文本（用户实报"方框消失、没有下拉提示"）。 */
+  width: 100%;
+  cursor: pointer;
+  /* 底色比面板略深/略浅一点，让它在视觉上是个可点的控件而不是静态文字 */
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}
+
+.uniterminal-overlay-panel select:focus-visible {
+  outline: 2px solid color-mix(in srgb, currentColor 35%, transparent);
+  outline-offset: 1px;
+}
+
+.uniterminal-overlay-panel button {
+  padding: 4px 10px;
+}
+
+/* 面板内收紧：字段间距与提示字号都小一档——字号收在阶梯最低档 13px。
+   这条曾经原样重复写了两次（同一选择器、同一组声明），现在只留一处。 */
+.uniterminal-overlay-panel .uniterminal-hint {
+  font-size: var(--ut-font-sm);
+  margin: 0;
+}
+
+.uniterminal-overlay-panel input:not([type="checkbox"]):not([type="color"]) {
+  padding: 4px 8px;
+}
+
+.uniterminal-hostrow {
+  gap: 2px;
+}
+
+/* 自绘下拉：颜色全部走主题变量，深色主题下不会再出现"白底浅字"。
+   原生 <select> 的弹出层由浏览器绘制、不继承这些变量，是这次换掉它的原因。 */
+.uniterminal-select {
+  position: relative;
+  width: 100%;
+}
+
+.uniterminal-select-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+  border: 1px solid var(--ut-border);
+  border-radius: var(--ut-radius-sm);
+}
+
+.uniterminal-select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uniterminal-select-caret {
+  flex: 0 0 auto;
+  opacity: 0.7;
+}
+
+.uniterminal-select-list {
+  /* 在流内展开，不用 absolute：
+     面板本身是滚动容器（overflow-y: auto），绝对定位的列表会被面板裁掉，
+     而且会跟着内容滚。放在流里由面板统一滚动，永远不会被切边。 */
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px;
+  color: inherit;
+  border: 1px solid var(--ut-border);
+  border-radius: var(--ut-radius-md);
+  box-shadow: 0 10px 24px var(--ut-scrim-35);
+}
+
+.uniterminal-select-option {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: var(--ut-radius-sm);
+}
+
+.uniterminal-select-option:hover,
+.uniterminal-select-option:focus-visible {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.uniterminal-select-option[aria-selected="true"] {
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  font-weight: var(--ut-weight-strong);
+}
+
+/* 浮层表面的配色规则（重要，别再拆开）：
+   背景取自宿主的层色变量链，**文字一律 inherit**——
+   继承的是它所在面板的文字色，与那块表面本来就是一对；
+   若背景取别名、文字取系统色，遇到"只改了背景"的彩色皮肤就会出现深底黑字/浅底白字。 */
+
+/* 搜索框：与工具栏按钮同一行、同一高度；放大镜在左，清空按钮在右。
+   （原先工具栏最后一个元素是「新建分组」，用户在它右边画了红框提需求） */
+.uniterminal-search {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 0 6px;
+  border: 1px solid var(--ut-border);
+  border-radius: var(--ut-radius-sm);
+}
+
+.uniterminal-search input {
+  width: 160px;
+  padding: 4px 2px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+}
+
+.uniterminal-search input:focus {
+  outline: none;
+}
+
+.uniterminal-search-icon {
+  /* 内联 SVG 而不是 emoji：字形跨机器一致，且跟随 currentColor */
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.7;
+}
+
+.uniterminal-search button {
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* 工具栏：窗口一窄，按钮文字会被"按字折行"（"手动连接"竖排成四行），非常难看。
+   规则分三档：
+   ① 按钮与标签一律 nowrap、不参与收缩（flex: 0 0 auto）；
+   ② 搜索框是唯一可收缩的元素，先让它变窄；
+   ③ 容器允许换行——但换的是整个按钮，不是按钮里的字。 */
+.uniterminal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* B4 第四段：同选择器的两条规则合并成这一条（flex / white-space 在前，align-self 在后，
+   顺序与合并前一致，谁赢谁不赢都没变）。 */
+.uniterminal-toolbar > button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  /* 工具栏按钮垂直居中：.uniterminal-pane button 的 align-self: flex-start
+     与本选择器同特异度（0,1,1）却写在前面，会盖掉容器的 align-items: center，
+     按钮于是顶对齐。这条只补 align-self，不动上面那条规则的任何声明。 */
+  /* B4 第四段：同选择器的两条已在本次合并——上面那句里的"上面那条规则"就是本规则里的
+     flex / white-space 两行，它们仍排在 align-self 之前，胜者不变。 */
+  align-self: center;
+}
+
+.uniterminal-toolbar .uniterminal-search {
+  /* 唯一可收缩的元素；min-width 设为 0，窄到极点也不把整行撑出去 */
+  flex: 1 1 140px;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.uniterminal-toolbar .uniterminal-search input {
+  width: 100%;
+  min-width: 0;
+}
+
+/* 面板内所有按钮与标签都不折字：宁可省略号，也不要竖排 */
+.uniterminal-pane button,
+.uniterminal-pane label {
+  white-space: nowrap;
+}
+
+/* B4 第四段：下面四条注释各自描述的规则，原本是同一个选择器的 4 条规则，
+   现在合并成这一条；声明只留生效值（flex 取最后生效的 0 0 auto，
+   padding / min-width / 省略号 / 透明度 / 描边与过渡全部保留）。 */
+/* 行内动作按钮：默认"安静"——无描边、降不透明度；鼠标移到该行（或键盘聚焦）才浮现描边与语义色。
+   一行 4 个按钮 × N 行，常驻描边会铺出几十个框，颜色也被稀释；
+   让红/绿只在关注某行时出现，信息量才回来。内联语义色保留，靠不透明度压暗。 */
+/* 动作按钮在极窄窗口下不再硬撑：允许压缩并显示省略号，完整文字在 title 里。 */
+/* 行内动作按钮收紧：原先 padding 4px 12px + 行 gap 6px，
+   字与字之间被撑到约 26px，看着很散。收紧到 7px 内边距 + 4px 间距后约 18px，
+   既不再空旷，也留得住悬停时那一圈描边（再小就会互相挤压）。 */
+/* 行内动作：不参与收缩。窗口窄时按钮保持完整字，
+   宁可让整行内容被挤压（超长的主机名早已有省略号兜底），也不要出现"编…""测…"。 */
+.uniterminal-hostrow button:not(.uniterminal-hostname),
+.uniterminal-grouprow button {
+  border-color: transparent;
+  opacity: 0.55;
+  transition: opacity 120ms ease, border-color 120ms ease, background 120ms ease;
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 3px 5px;
+}
+
+/* 右键菜单：相对面板定位（面板是定位上下文），不依赖视口。
+   不透明背景 + 主题文字色，避免玻璃主题下透底看不清。 */
+.uniterminal-context-menu {
+  position: absolute;
+  z-index: 80;
+  min-width: 132px;
+  padding: 4px;
+  /* 不透明画布（Canvas + 主题色薄涂）见上方「浮层表面」分组规则，这里不再重写 */
+  color: inherit;
+  border: 1px solid var(--ut-border);
+  border-radius: var(--ut-radius-lg);
+  box-shadow: 0 12px 28px var(--ut-scrim-32);
+}
+
+/* 右键菜单项：外观必须由菜单自己说了算。
+   旧选择器 .uniterminal-context-item 只有 (0,1,0)，压不过 .uniterminal-pane button (0,1,1)，
+   菜单项于是继承了面板按钮的描边（1px solid）与药丸圆角（999px）——
+   真机上显示成"一摞按钮"而不是菜单。
+   现在选择器抬到 (0,2,0)，并把外观**完整地**自己声明一遍：
+   字号也写死，免得又被面板按钮规则盖掉。 */
+.uniterminal-context-menu .uniterminal-context-item {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  /* 5px 改成 6px：菜单项挤在一起观感差，要留一点呼吸 */
+  padding: 6px 10px;
+  font-size: var(--ut-font-sm);
+  font-family: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: var(--ut-radius-sm);
+  white-space: nowrap;
+  transition: background 120ms ease;
+}
+
+/* 悬停/聚焦底色：也要压过 .uniterminal-pane button:hover:not(:disabled)（(0,3,1)），
+   所以照抄面板按钮的 :not(:disabled) 写法，把类名级抬到 4，底色才由菜单说了算。 */
+.uniterminal-context-menu .uniterminal-context-item:hover:not(:disabled),
+.uniterminal-context-menu .uniterminal-context-item:focus-visible:not(:disabled) {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.uniterminal-context-menu .uniterminal-context-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* 菜单项的可见焦点圈（B5）：焦点是靠脚本送进菜单的（打开即落在第一项），
+   没有原生焦点环可依赖；上面那条底色只有 12% 的薄涂，浅色/玻璃主题下几乎看不出焦点在哪一项。
+   这里**追加**一圈描边（只新增声明，不改上面既有的底色规则），让键盘用户看得见自己停在哪。 */
+.uniterminal-context-menu .uniterminal-context-item:focus-visible {
+  outline: 2px solid color-mix(in srgb, currentColor 45%, transparent);
+  outline-offset: -2px;
+}
+
+/* ===== 布局原语（layout primitives）：由 .tsx 侧使用，不要在本文件里删 =====
+   本段只**新建**类，不去改任何 .tsx：下一段才把 UniterminalTab / HostListView /
+   SftpPanel / … 里 176 处内联样式换成这些 className。
+   数值一律走顶部令牌（字号 / 间距 / 字重），这里不再写死 px——否则等于把硬编码搬个地方。
+   ⚠ 不要给 button 用：按钮的外观（药丸圆角 --ut-radius-pill、13px 字号、内边距）
+   由 .uniterminal-pane button 统一决定。这些类的特异度只有 (0,1,0)，本来就压不过它。 */
+
+/* 一行横排：display:flex + align-items:center + gap:8px
+   替代内联的 display:"flex"（47 处）× alignItems:"center"（33 处）× gap:8（30 处） */
+.uniterminal-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ut-space-2);
+}
+
+/* 同 .uniterminal-row 但**不带 gap**：原来只写了 display + alignItems 的地方用它 */
+.uniterminal-row-tight {
+  display: flex;
+  align-items: center;
+}
+
+/* 竖排：替代 flexDirection:"column"（14 处） */
+.uniterminal-col {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 允许换行：替代 flexWrap:"wrap"（12 处） */
+.uniterminal-wrap {
+  flex-wrap: wrap;
+}
+
+/* 弹性吃掉剩余宽度**且**允许收缩：minWidth:0 与 flex:"1 1 auto" 几乎总是成对出现，
+   合并成一条（替代 flex:"1 1 auto" 8 处 + 与之配套的 minWidth:0）。单独要 minWidth:0 用 .uniterminal-shrink */
+.uniterminal-grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 只允许收缩、不长大：替代单独写的 minWidth:0 */
+.uniterminal-shrink {
+  min-width: 0;
+}
+
+/* 交叉轴居中：替代 alignSelf:"center"（13 处） */
+.uniterminal-self-center {
+  align-self: center;
+}
+
+/* 半粗强调：替代 fontWeight:600（10 处）。分组标题那种 650 走 --ut-weight-title，不用这个类 */
+.uniterminal-strong {
+  font-weight: var(--ut-weight-strong);
+}
+
+/* 阶梯最低档 13px：替代 fontSize:13（20 处） */
+.uniterminal-small {
+  font-size: var(--ut-font-sm);
+}
+
+/* 正文档 14px：标签、输入值、正文 */
+.uniterminal-body {
+  font-size: var(--ut-font-md);
+}
+
+/* 单行省略：替代 overflow:"hidden" + textOverflow:"ellipsis" + whiteSpace:"nowrap" 这套三连 */
+.uniterminal-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 右对齐：替代 textAlign:"right" */
+.uniterminal-right {
+  text-align: right;
+}
+
+/* 长串强制断行（URL / 密钥 / 指纹）：替代 wordBreak:"break-all" */
+.uniterminal-break {
+  word-break: break-all;
+}
+
+/* ===== B4 第三段：按钮修饰类 + 剩余常用类（只追加，不改上面任何一条规则） =====
+   ⚠ 本段的类仍然**不写死 px**：间距/字号/圆角一律走顶部令牌。 */
+
+/* --- 按钮修饰类：两层选择器 (0,2,1) ---
+   .uniterminal-pane button 是 (0,1,1)，单类原语 (0,1,0) 压不过它——所以按钮上的
+   align-self / padding 只能靠**带 .uniterminal-pane 前缀**的类来接管，不需要 !important。
+   ⚠ 这些类只碰 align-self 与 padding：字号 13px、药丸圆角 999px 是测试锁死的契约，
+   在这里写 font-size / border-radius 等于把契约改了。 */
+
+/* 交叉轴居中：替代按钮上的 alignSelf:"center" */
+.uniterminal-pane button.uniterminal-self-center {
+  align-self: center;
+}
+
+/* 会话栏的 × 与「＋」：默认 2px 10px 把这些药丸撑得太开 */
+.uniterminal-pane button.uniterminal-compact {
+  padding: 2px 6px;
+}
+
+/* 显示 / 隐藏密码与口令、主题模式：文字比 × 长，内边距各多 2px */
+.uniterminal-pane button.uniterminal-compact-wide {
+  padding: 2px 8px;
+}
+
+/* --- 面板骨架与容器 --- */
+
+/* 允许在 flex 列里收缩：替代面板骨架上的 minHeight:0。
+   （注意与 .uniterminal-shrink 区分：那个是 min-width） */
+.uniterminal-fill {
+  min-height: 0;
+}
+
+/* 竖排 + gap 8：替代"列容器再补一个 gap:8"。与 .uniterminal-col 同源，
+   多出来的只是间距——所以新代码直接用这个，不必再写 .uniterminal-col + 内联 gap */
+.uniterminal-col-gap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ut-space-2);
+}
+
+/* 弹性吃掉剩余宽度，但**不带 min-width:0**：表单控件（输入框 + 旁边的按钮）需要它。
+   不要换成 .uniterminal-grow——那里多了 min-width:0，长占位符的输入框会一路缩到挤掉按钮 */
+.uniterminal-flex-auto {
+  flex: 1 1 auto;
+}
+
+/* 标题行：左标题、右动作 */
+.uniterminal-between {
+  justify-content: space-between;
+}
+
+/* 不参与伸缩：会话栏、工具栏这类"永远占满自己那一行"的容器 */
+.uniterminal-fixed {
+  flex: 0 0 auto;
+}
+
+/* 左对齐：就地提示（notice）在浮层里默认会被居中 */
+.uniterminal-left {
+  text-align: left;
+}
+
+/* 横幅外壳：一组内容装进一个淡框（旧版导入提示、会话孤儿提示、外观保存提示） */
+.uniterminal-banner {
+  padding: var(--ut-space-2);
+  border: 1px solid var(--ut-border);
+  border-radius: var(--ut-radius-sm);
+}
+
+/* --- 表格列宽 --- */
+
+.uniterminal-col-size {
+  width: var(--ut-col-size);
+}
+
+.uniterminal-col-mtime {
+  width: var(--ut-col-mtime);
+}
+
+.uniterminal-col-actions {
+  width: var(--ut-col-actions);
+}
+
+.uniterminal-col-mode {
+  width: var(--ut-col-mode);
+}
+
+.uniterminal-col-local {
+  width: var(--ut-col-local);
+}
+
+.uniterminal-col-state {
+  width: var(--ut-col-state);
+}
+
+/* --- 进度条 --- */
+
+/* 轨道：高度/圆角/底色固定，宽度由外层决定 */
+.uniterminal-progress-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ut-gray-25, rgba(128, 128, 128, 0.25));
+  overflow: hidden;
+}
+
+/* 填充：宽度是数据（已传字节），仍然留内联 */
+.uniterminal-progress-fill {
+  height: 100%;
+}
+
+/* ===== 常驻 live region 的容器（B5 无障碍）=====
+   读屏软件只在**内容变化**时播报；节点刚插入的那一刻往往被漏掉，
+   所以 `{err && <div role="alert">…}` 其实播不出去。外层容器永远留在 DOM 里，
+   只有里面的文字会变——播报才有东西可播。
+   本类只做一件事：**这一刻还没有内容时不占流内位置**。
+   面板根是 .uniterminal-pane（flex + gap 8px）、浮层是 .uniterminal-overlay-panel
+   （flex + gap 10px）：一个空 div 也是一个 flex 子项，gap 会凭空多出一整段间距；
+   而 .uniterminal-notice 自带内边距与描边，空着就更显眼。
+   :empty 时只把它挪出流（绝对定位 + 1px），**绝不用"不可见"来藏 live region**：
+   把 display / visibility 置成不可见、或加 aria-hidden，读屏软件就干脆收不到内容变化，
+   这一整轮改动也就白做了。（本规则里没有任何一条声明影响可见性或无障碍树。）
+   有文字时本规则不生效，容器退回普通块级，里面的 .uniterminal-notice 原样显示。 */
+.uniterminal-live:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ===== B5 无障碍第三段：「更多操作」按钮的显形规则（只追加，不改上面任何一条规则）=====
+
+   菜单以前只有右键能开，纯键盘用户根本进不去那一排动作（WCAG 2.1.1 的硬失败）。
+   补的入口是一个**静止时不可见**的按钮：面板外观不变，但它必须仍然在 Tab 序列里。
+
+   ⚠ 隐藏只能用 opacity：display: none / visibility: hidden 会把元素移出 Tab 序列
+   与无障碍树，键盘用户就永远聚焦不到它——整轮的改动等于白做。
+   （opacity: 0 仍然可聚焦、可被读屏读到，只是看不见。）
+
+   ⚠ 选择器必须带 .uniterminal-pane 前缀抬到 (0,2,0) 以上：
+   .uniterminal-pane button 是 (0,1,1)，单类 (0,1,0) 会被它压死，
+   于是 opacity 写成一条静默失效的死声明——这正是 B4-4 刚清理过的坑。 */
+
+.uniterminal-pane .uniterminal-row-more {
+  opacity: 0;
+  transition: background 120ms ease, opacity 120ms ease;
+}
+
+/* 行被悬停、或行内有焦点（Tab 进来 / 键盘唤出菜单后）才显形 */
+.uniterminal-pane .uniterminal-hostrow:hover .uniterminal-row-more,
+.uniterminal-pane .uniterminal-hostrow:focus-within .uniterminal-row-more,
+.uniterminal-pane .uniterminal-grouprow:hover .uniterminal-row-more,
+.uniterminal-pane .uniterminal-grouprow:focus-within .uniterminal-row-more {
+  opacity: 1;
+}
+
+/* ===== B5 无障碍第四段：SFTP 文件名的「选中」按钮（只追加，不改上面任何一条规则）=====
+
+   文件行原来是 <div onClick>：「选中」只能靠点行，而删除（removeSelected）又依赖选中项，
+   纯键盘用户进得去这一屏，却选不中任何文件 —— WCAG 2.1.1 的硬失败。
+   文件名换成 button 把这条动作接进 Tab 序列，外观必须与原来的 span 一模一样：
+   左对齐、单行省略、不撑满、没有描边也没有药丸。
+
+   ⚠ 选择器抬到 (0,2,0)：.uniterminal-pane button 是 (0,1,1)，单类 (0,1,0) 会被它压死，
+   padding / 药丸圆角 / 13px 字号 / 1px 描边会全数回来，文件名当场变成一颗胶囊。 */
+
+.uniterminal-pane .uniterminal-file-name {
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  border-radius: var(--ut-radius-sm);
+  /* 省略三件套：与原来的 .uniterminal-ellipsis 同一份写法 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 悬停底色对它是多余的：整行自己已经有高亮（背景画在行容器上）。
+   .uniterminal-pane button:hover:not(:disabled) 是 (0,3,1)，
+   所以这里带上 :not(:disabled) 抬到 (0,4,0) 才压得住。 */
+.uniterminal-pane .uniterminal-file-name:hover:not(:disabled) {
+  background: transparent;
+}

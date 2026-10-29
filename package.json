@@ -1,0 +1,94 @@
+{
+  "name": "@winking-r/dsh-uniterminal",
+  "version": "0.2.16",
+  "description": "在 DSH 右侧栏里提供 SSH 终端、SFTP 文件管理与端口转发的插件；密码交给操作系统密码箱保管，插件自身不实现加密。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "ssh",
+    "sftp",
+    "terminal",
+    "web-terminal",
+    "port-forwarding",
+    "xterm",
+    "ssh-client",
+    "proxy-jump",
+    "remote-terminal",
+    "credential-store"
+  ],
+  "homepage": "https://github.com/WinKing-R/dsh-uniterminal#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WinKing-R/dsh-uniterminal.git"
+  },
+  "bugs": {
+    "url": "https://github.com/WinKing-R/dsh-uniterminal/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "docs/SECURITY.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dsh": {
+    "engines": {
+      "dsh": ">=0.2.1-rc.2"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-sidebar-right",
+        "@deepseek-ai/dsh-client-modules"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "^3.18.5",
+    "@napi-rs/keyring": "^2.1.2",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "ssh2": "^1.17.0",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^15.0.7",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/node": "^26.6.5",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "18.3.7",
+    "@types/ssh2": "^1.15.6",
+    "@types/ws": "^8.18.2",
+    "jsdom": "^30.1.3",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "tsdown": "^0.23.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}
