@@ -6,6 +6,17 @@
 
 ## [Unreleased]
 
+### 工程
+
+- 新增 **CI**（`.github/workflows/ci.yml`）：push / PR 到 `main` 时在 Node 22 与 24 上依次跑 `typecheck` → `test` → `build`。
+- `pnpm-workspace.yaml` 声明 `strictDepBuilds: false`：`ssh2` 与其可选加速件 `cpu-features` 的构建脚本被 pnpm 默认阻塞，
+  而 pnpm 会因此**以非零码退出**（本地与 CI 都中招，容易误判成"依赖装不上"）。只关掉「跳过构建即报错」，不放开任何构建脚本。
+
+### 修复
+
+- 两个凭据存储测试在 POSIX 上失败：它们用 `writeFile` 造「已存在的 `credentials.json`」，默认权限 0644，
+  恰好被「权限过宽即拒绝加载」这条**正确**的安全行为拒绝。改为与该 store 自身写入一致的 **0600**。
+
 ## [0.2.18] - 2026-10-29
 
 纯文档版本，**代码与 0.2.17 完全相同**。

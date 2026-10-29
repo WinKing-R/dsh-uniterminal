@@ -2,6 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/@winking-r/dsh-uniterminal.svg)](https://www.npmjs.com/package/@winking-r/dsh-uniterminal)
 [![license](https://img.shields.io/npm/l/@winking-r/dsh-uniterminal.svg)](LICENSE)
+[![CI](https://github.com/WinKing-R/dsh-uniterminal/actions/workflows/ci.yml/badge.svg)](https://github.com/WinKing-R/dsh-uniterminal/actions/workflows/ci.yml)
 [![GitHub](https://img.shields.io/badge/GitHub-WinKing--R%2Fdsh--uniterminal-blue)](https://github.com/WinKing-R/dsh-uniterminal)
 
 SSH / SFTP / 端口转发，挂在 DSH 右侧栏里。**一个侧边栏标签里装多条会话**（顶部会话栏切换；同一台主机连两次显示 `#2`），

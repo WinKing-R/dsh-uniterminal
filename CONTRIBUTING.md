@@ -2,17 +2,24 @@
 
 ## 环境
 
-- Node **>= 20**（`package.json` 的 `engines`）；包管理器用 **pnpm**（仓库有 `pnpm-lock.yaml`，不要用 npm 提交 `package-lock.json`）
+- Node **>= 20**（`package.json` 的 `engines`，最低兼容声明）；**CI 实际测的是 22 与 24**——Node 20 已于 2026-04 EOL，别拿它当目标
+- 包管理器用 **pnpm**（仓库有 `pnpm-lock.yaml`，不要用 npm 提交 `package-lock.json`）
 - DSH **>= 0.2.1-rc.2**（`package.json` 的 `dsh.engines`）
 
 ```bash
 pnpm install
 pnpm typecheck   # tsc --noEmit（strict + noUncheckedIndexedAccess）
-pnpm test        # vitest run：65 文件 / 921 用例，约 3.5 秒
+pnpm test        # vitest run：65 文件 / 922 用例，约 3.5 秒
 pnpm build       # tsdown：宿主半边 ESM + 客户端 CJS
 ```
 
 提交前这三条必须全绿；`npm publish` 也会通过 `prepublishOnly` 强制跑一遍。
+**CI 在 push / PR 到 `main` 时跑同样这三条**（Node 22 与 24，Ubuntu）。
+
+`pnpm install` 会打印一行 `Ignored build scripts: cpu-features, ssh2` —— **这是预期的**。
+那两个构建脚本我们主动不执行（`cpu-features` 是 ssh2 的可选加速件，缺了走纯 JS 实现），
+而 pnpm 默认会因此以非零码退出，所以 `pnpm-workspace.yaml` 里声明了 `strictDepBuilds: false`。
+它只关掉「跳过构建即报错」，不放开任何构建脚本 —— 别把它当成遗留配置删掉。
 
 ## 目录
 
