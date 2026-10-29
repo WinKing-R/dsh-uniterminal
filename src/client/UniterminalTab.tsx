@@ -1580,7 +1580,7 @@ async function forgetStoredPassword(profileId: string): Promise<void> {
                 autoComplete="off"
                 spellCheck={false}
                 disabled={!useKey}
-                placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                placeholder="粘贴私钥文件全文（含首尾 BEGIN / END 两行）"
                 onChange={(event) => setPrivateKeyText(event.target.value)}
                 className="uniterminal-body"
                 style={{

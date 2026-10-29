@@ -12,6 +12,11 @@
 - `pnpm-workspace.yaml` 声明 `strictDepBuilds: false`：`ssh2` 与其可选加速件 `cpu-features` 的构建脚本被 pnpm 默认阻塞，
   而 pnpm 会因此**以非零码退出**（本地与 CI 都中招，容易误判成"依赖装不上"）。只关掉「跳过构建即报错」，不放开任何构建脚本。
 
+### 变更
+
+- 私钥输入框的占位提示不再包含可被扫描器匹配的私钥签名（提示改为「粘贴私钥文件全文（含首尾 BEGIN / END 两行）」，指引不变）；
+  `docs/SECURITY.md` 新增一节，逐条说明代码里三处私钥标记的合法用途（scrub 正则、测试假密钥、占位提示）。
+
 ### 修复
 
 - **安装时会看到 `ERR_PNPM_IGNORED_BUILDS` 与退出码 1**：`ssh2` 的可选加速件 `cpu-features` 声明了构建脚本，
