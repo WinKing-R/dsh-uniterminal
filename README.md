@@ -53,6 +53,9 @@ dsh plugin --profile desktop add @winking-r/dsh-uniterminal@latest
 `--profile` 填你的 profile 名 —— `~/.dsh/profiles/` 下有哪些目录就用哪个（常见 `desktop` 或 `web`）。
 装完重启 DSH，右栏会出现 `UniTerminal` 标签。
 
+> **装的时候命令以退出码 1 结束、并打印 `Ignored build scripts: cpu-features, ssh2`，是预期现象**——包已经装好了，
+> 但自动登记可能被这一步打断。确认 `dsh.profile.bundles` 里有本包名，没有就手动加一行（见「故障排查」）。
+>
 > 没装 `dsh` 命令，或者要装本地构建（`link:` / `tgz`）时，用下面的手动方式，效果等价。
 
 ### 手动方式（等价，两步）
@@ -244,6 +247,7 @@ tail -n 50 ~/.dsh/uniterminal/diag.log
 
 | 症状 | 先查什么 |
 |---|---|
+| 装的时候报 **`ERR_PNPM_IGNORED_BUILDS`**、命令**退出码 1** | **包其实已经装好了。** `ssh2` 的可选加速件 `cpu-features` 声明了构建脚本，pnpm 默认不执行它们、并因此以非零码退出。副作用是**自动登记那一步会被跳过**——去 `~/.dsh/profiles/<你的 profile>/package.json` 的 `dsh.profile.bundles` 里手动加一行 `"@winking-r/dsh-uniterminal"`，再重启 DSH 即可 |
 | 插件在右栏不出现 | `dsh.profile.bundles` 里有没有追加本包名；**重启过** DSH 没有（硬刷新不够） |
 | 连接报 `unknown host key` | 主机指纹未信任；走一次「首次连接信任主机指纹」流程，或在设置里把 `knownHostsPolicy` 设为 `trust` |
 | 提示「系统密码箱不可用」 | 密码箱被锁 / 服务没起；此时新密码会临时写进本机文件，此前存在密码箱里的条目暂时取不到 |
