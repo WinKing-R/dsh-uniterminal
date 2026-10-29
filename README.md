@@ -1,5 +1,9 @@
 # UniTerminal · DSH 远程终端插件
 
+[![npm](https://img.shields.io/npm/v/@winking-r/dsh-uniterminal.svg)](https://www.npmjs.com/package/@winking-r/dsh-uniterminal)
+[![license](https://img.shields.io/npm/l/@winking-r/dsh-uniterminal.svg)](LICENSE)
+[![GitHub](https://img.shields.io/badge/GitHub-WinKing--R%2Fdsh--uniterminal-blue)](https://github.com/WinKing-R/dsh-uniterminal)
+
 SSH / SFTP / 端口转发，挂在 DSH 右侧栏里。**一个侧边栏标签里装多条会话**（顶部会话栏切换；同一台主机连两次显示 `#2`），
 每条会话的终端、文件、隧道三视图并列。
 
@@ -29,10 +33,13 @@ SSH / SFTP / 端口转发，挂在 DSH 右侧栏里。**一个侧边栏标签里
 # 在 DSH 的 desktop profile 目录下执行
 cd ~/.dsh/profiles/desktop
 
-# 方式一：从源码链接（改代码即生效，开发用）
+# 方式一：从 npm 安装（推荐，不需要 Node 工具链）
+pnpm add @winking-r/dsh-uniterminal
+
+# 方式二：从源码链接（改代码即生效，开发用）
 pnpm add "link:<你的本仓库绝对路径>"
 
-# 方式二：从目录安装（用打包好的 tgz，无需 Node 工具链）
+# 方式三：从目录安装（用打包好的 tgz）
 pnpm add "file:<tgz 的绝对路径>"
 ```
 

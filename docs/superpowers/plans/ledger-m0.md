@@ -4096,3 +4096,55 @@ SFTP 目录加载失败 / 隧道列表失败 / 主机行内「测试连接」结
 
 **验证**：typecheck 0 / **915 用例**（64 文件）/ build 0 / 脱敏四模式全 0 / `npm pack` 6 文件。
 
+## M73：开源发布——`@winking-r/dsh-uniterminal@0.2.16` 已上架 npm
+
+**结果**：2026-10-29 发布成功，registry 侧独立验证通过——
+7 个文件 / 1223.3 kB 解包 / **MIT** / 维护者 `winking-r` / 包内**没有** src、test、规划文档。
+
+仓库：`https://github.com/WinKing-R/dsh-uniterminal`（**一条初始提交**，见 M72 的历史重开）。
+
+**但那之前折腾了很久，教训比结果值钱：**
+
+### 1. npm 新账号的 2FA 只有 passkey，没有 TOTP
+2026-10 注册的账号，2FA 设置页的 METHOD 步骤**只列 Security key**，没有 "Authenticator app"。
+所以"用 Aegis/验证器 App 扫二维码"这条路**对新账号根本不存在**——
+那个二维码是 **FIDO** 的，Aegis 报 `Unsupported protocol: FIDO` 就是证据。
+**教训：看到 `Unsupported protocol: FIDO`，问题不是 App 不好，是二维码类型不对。**
+
+### 2. 开了 passkey 2FA **仍然不能** CLI 发布
+`npm publish` 报 403：`Two-factor authentication **or** granular access token with bypass 2fa enabled is required`。
+passkey 产不出 6 位码 → **CLI 发布只能走带 bypass 2FA 的 granular token**。
+
+### 3. GAT 的三个坑（每个都真实踩过）
+- `Permissions` 必须 **Read and write (publish and stage)**；选 `stage only` 会得到
+  "Stage-only tokens cannot publish new package versions directly"。
+- `Organizations → Permissions` 必须是 **No access**。若是 Read and write 而你没有组织，
+  点生成会报 "You must select at least one organization…"，**而且表单会被整页重置**
+  （Bypass 勾选和 permissions 全部复原）——很容易在重置后生成一个废 token。
+- **403 与 404 的含义完全不同**：403 = 2FA 那关没过；**404 = 2FA 过了但没这个包的写权限**
+  （npm 故意用 404 而不是 403，避免泄漏包是否存在）。
+  **从 403 变 404 是进步，不是退步。**
+- 最终可行的配置：`Only select packages and scopes` + 显式加 **`@winking-r` 这个 scope**。
+  （推测原因：`All packages` 只覆盖**已存在**的包，对**还没发布过的新包**不生效——
+  这一条是推断，未被单独验证，记录在此供后来者参考。）
+
+### 4. `--auth-type=web` 不会绕过 .npmrc 里的 token
+只要 `//registry.npmjs.org/:_authToken` 存在，`npm publish --auth-type=web` 就**静默用那个 token**，
+不弹浏览器。想走浏览器认证必须先 `npm config delete` 掉它。
+
+### 5. `+ pkg@version` ≠ 立刻可读
+发布返回成功、提示 "being processed" 之后，registry 仍会 404 约 **3 分钟**（实测 6 次轮询才 200）。
+**教训：看到 `+` 就去 `npm view` 验证，但别只查一次就判定失败。**
+
+### 6. 前瞻：bypass 2FA 的 token 2027-01 会被移除
+npm 页面明确写着 "The ability to publish new versions directly with a granular access token
+will be removed in **January 2027**"。届时的正路是 **Trusted Publishing**（GitHub Actions 里用 OIDC
+换短期发布权限，不需要长驻 token）。仓库已经在 GitHub 上，条件具备，将来接 CI 时一并换成它。
+
+### 7. 恢复码必须当密码对待
+配 2FA 时生成的 recovery codes 是**绕过 2FA 登录**的凭据。本轮曾把它们截图发出去，
+处理方式：先存两处，再**重新生成一套**（旧的立即失效）。
+**教训：任何一次性恢复码/令牌，永不进聊天、截图、issue、日志。**
+
+**发布前的门禁**（`prepublishOnly` 每次都跑）：typecheck 0 / **915 用例（64 文件）** / build 0。
+

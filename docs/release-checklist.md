@@ -114,9 +114,9 @@ echo "exit=$?  （1 = 无匹配，符合预期）"
 
 ## 7. 发布后
 
-- [ ] `npm view @winking-r/dsh-uniterminal` 能看到新版本
+- [x] `npm view @winking-r/dsh-uniterminal` 能看到新版本 → **已发布 0.2.16（MIT）并通过 registry 侧独立验证**
 - [ ] npm 页面上的 README 渲染正常、示例可跑、链接不 404
-- [ ] 在 README 补安装徽章 / 一行安装命令（`pnpm add @winking-r/dsh-uniterminal`）
+- [x] 在 README 补安装徽章 / 一行安装命令（`pnpm add @winking-r/dsh-uniterminal`）
 - [ ] 登记到 DSH 插件列表（如果官方有这样的清单）
 - [ ] 打 git tag（`git tag v<version> && git push --tags`）并写 release notes
 
