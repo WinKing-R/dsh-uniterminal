@@ -9,8 +9,15 @@ export interface ContextMenuItem {
 }
 
 export interface ContextMenuProps {
-  /** 相对面板的坐标（面板本身是定位上下文）。 */
-  left: number;
+  /**
+   * 相对面板的坐标（面板本身是定位上下文）。
+   *
+   * **left 与 right 互斥**，由 `menuAnchor()` 决定用哪一个：
+   * 锚点靠右时改用 right（菜单向左展开），否则会伸出面板右边缘被宿主的 overflow 裁掉。
+   * 两个都设会让 `position: absolute` 的元素被拉伸到两边贴齐。
+   */
+  left?: number;
+  right?: number;
   top: number;
   items: readonly ContextMenuItem[];
   onClose: () => void;
@@ -142,7 +149,7 @@ export function ContextMenu(props: ContextMenuProps): ReactElement {
       className="uniterminal-context-menu"
       role="menu"
       aria-label={props.label}
-      style={{ left: props.left, top: props.top }}
+      style={{ left: props.left, right: props.right, top: props.top }}
       onMouseDown={(event) => event.stopPropagation()}
       onKeyDown={onMenuKeyDown}
     >

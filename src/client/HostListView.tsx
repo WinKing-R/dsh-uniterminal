@@ -3,6 +3,7 @@ import { hasKeyAuth } from "./auth-selection.js";
 import { NAME_MAX } from "../name-limits.js";
 import { ConfirmDialog } from "./confirm-dialog.js";
 import { ContextMenu } from "./context-menu.js";
+import { menuAnchor, type MenuAnchor } from "./menu-anchor.js";
 import { filterHosts } from "./host-filter.js";
 import { SelectField } from "./select-field.js";
 import { KeyIcon, SearchIcon, ShieldCheckIcon } from "./host-icons.js";
@@ -318,14 +319,16 @@ const TEST_RESULT_TTL_MS = 10000;
    * 「更多操作」按钮是那个按钮。没有它，关掉菜单等于把键盘用户的焦点扔回 body。
    */
   const [groupMenu, setGroupMenu] = useState<{
-    left: number;
+    left?: number;
+    right?: number;
     top: number;
     groupId: string;
     trigger: HTMLElement;
   }>();
   /** 主机菜单：坐标相对面板；profileId 指向被操作的那台主机，trigger 同上。 */
   const [menu, setMenu] = useState<{
-    left: number;
+    left?: number;
+    right?: number;
     top: number;
     profileId: string;
     trigger: HTMLElement;
@@ -811,10 +814,17 @@ async function previewImport(): Promise<void> {
    * 就从触发元素自己的 rect 减——两条路得到同一个坐标系，不要另造一套。
    * （面板是 position: relative，所以主题给祖先加 transform 也不会把菜单带偏。）
    */
-  function anchorOf(element: HTMLElement): { left: number; top: number } {
+  function anchorOf(element: HTMLElement): MenuAnchor {
     const rect = element.getBoundingClientRect();
-    const pane = paneRef.current?.getBoundingClientRect();
-    return { left: rect.left - (pane?.left ?? 0), top: rect.bottom - (pane?.top ?? 0) };
+    const pane = paneRef.current;
+    const paneRect = pane?.getBoundingClientRect();
+    // 横向基准取锚点的**右边缘**：靠右时 menuAnchor 会改成右对齐、向左展开，
+    // 否则行尾那个「更多操作」按钮的菜单会伸出面板右边缘被宿主的 overflow 裁掉。
+    return menuAnchor(
+      rect.right - (paneRect?.left ?? 0),
+      rect.bottom - (paneRect?.top ?? 0),
+      pane?.clientWidth ?? 0,
+    );
   }
 
   /** 打开主机菜单：trigger 既当锚点，也是关闭后焦点要回的元素。 */
@@ -853,10 +863,14 @@ async function previewImport(): Promise<void> {
         onContextMenu={(event) => {
           event.preventDefault();
           // 坐标相对面板（面板是定位上下文）：主题加 transform 也不会把菜单带偏
-          const rect = paneRef.current?.getBoundingClientRect();
+          const pane = paneRef.current;
+          const rect = pane?.getBoundingClientRect();
           setMenu({
-            left: event.clientX - (rect?.left ?? 0),
-            top: event.clientY - (rect?.top ?? 0),
+            ...menuAnchor(
+              event.clientX - (rect?.left ?? 0),
+              event.clientY - (rect?.top ?? 0),
+              pane?.clientWidth ?? 0,
+            ),
             profileId: profile.id,
             trigger: event.currentTarget,
           });
@@ -1265,10 +1279,14 @@ async function previewImport(): Promise<void> {
                 onContextMenu={(event) => {
                   event.preventDefault();
                   // 坐标相对面板（面板是定位上下文）：主题给祖先加 transform 也不会把菜单带偏
-                  const rect = paneRef.current?.getBoundingClientRect();
+                  const pane = paneRef.current;
+                  const rect = pane?.getBoundingClientRect();
                   setGroupMenu({
-                    left: event.clientX - (rect?.left ?? 0),
-                    top: event.clientY - (rect?.top ?? 0),
+                    ...menuAnchor(
+                      event.clientX - (rect?.left ?? 0),
+                      event.clientY - (rect?.top ?? 0),
+                      pane?.clientWidth ?? 0,
+                    ),
                     groupId: node.id,
                     trigger: event.currentTarget,
                   });

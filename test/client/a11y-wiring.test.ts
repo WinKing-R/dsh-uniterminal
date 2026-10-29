@@ -208,11 +208,20 @@ describe("菜单的键盘入口", () => {
     const source = await read("../../src/client/HostListView.tsx");
     const at = source.indexOf("function anchorOf(");
     expect(at).toBeGreaterThan(-1);
-    const body = source.slice(at, at + 400);
+    // 按**函数边界**切，不按固定字符数切：给函数加注释后 400 字符窗口就会把末尾截掉。
+    // （同类坑在 session-bar.test.ts 也踩过一次——固定窗口会随写法变化而飘。）
+    const bodyEnd = source.indexOf("\n  }", at);
+    expect(bodyEnd).toBeGreaterThan(at);
+    const body = source.slice(at, bodyEnd);
 
     expect(body).toContain("getBoundingClientRect()");
-    expect(body).toContain("rect.left - (pane?.left ?? 0)");
-    expect(body).toContain("rect.bottom - (pane?.top ?? 0)");
+    // 横向基准从"锚点左边缘"改成"锚点右边缘"：靠右时才能改成右对齐、向左展开，
+    // 否则行尾「更多操作」的菜单会伸出面板右边缘被宿主的 overflow 裁掉（真机缺陷）。
+    expect(body).toContain("rect.right - (paneRect?.left ?? 0)");
+    expect(body).toContain("rect.bottom - (paneRect?.top ?? 0)");
+    // 但**仍然只有一套基准**：左右对齐的判定必须交给同一个纯函数，
+    // 不许在组件里另写一份"如果太靠右就减掉宽度"的算法（那就是第二套坐标了）。
+    expect(body).toContain("menuAnchor(");
   });
 });
 

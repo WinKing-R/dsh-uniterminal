@@ -69,9 +69,11 @@ describe("host row actions (M57)", () => {
     expect(tag).toContain("setGroupMenu(");
     // 坐标相对面板算：面板是定位上下文，祖先被主题加 transform 也不会把菜单带偏
     expect(tag).toContain("event.preventDefault()");
-    expect(tag).toContain("paneRef.current?.getBoundingClientRect()");
+    expect(tag).toContain("pane?.getBoundingClientRect()");
     expect(tag).toContain("event.clientX - (rect?.left ?? 0)");
     expect(tag).toContain("event.clientY - (rect?.top ?? 0)");
+    // 靠右时必须交给 menuAnchor 判定（改成右对齐向左展开），否则菜单被面板右边缘裁掉
+    expect(tag).toContain("menuAnchor(");
     expect(tag).toContain("groupId: node.id");
     // 绝不能退回"视口坐标 + fixed"（那个坑记在 tab.module.css 里）
     expect(tag).not.toContain("position: fixed");

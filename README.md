@@ -29,6 +29,19 @@ SSH / SFTP / 端口转发，挂在 DSH 右侧栏里。**一个侧边栏标签里
 前提：DSH `>=0.2.1-rc.2`（见本包 `package.json` 的 `dsh.engines`）、Node `>=20`。
 从源码装还需要 pnpm；用打好的 `tgz` 安装则**不需要**自己构建。
 
+### 右栏承载：官方 `sidebarRight` 或第三方 `DSH-better-sidebar`
+
+本插件**双注册 + 运行时探测**（`src/client/right-pane.ts`）：
+
+| 你的 DSH 里装了 | 插件注册到 | 结果 |
+|---|---|---|
+| [`DSH-better-sidebar`](https://github.com/omdsh-dev/DSH-better-sidebar) | `ctx.betterSidebar`（**优先**） | 右栏像 IDE 那样多标签并存，本插件占一个标签 |
+| 只有官方 `@deepseek-ai/dsh-client-ui-sidebar-right` | `ctx.sidebarRightTabs` | 回落到官方右栏标签 |
+
+两种都能用；**没有 better-sidebar 也能跑**（会自动回落）。
+若右栏始终不出现本插件，先确认这两者至少有一个已启用——诊断见
+[`docs/acceptance-m0.md`](docs/acceptance-m0.md)（`target=none` 表示两套注册表都不可用）。
+
 ```bash
 # 在 DSH 的 desktop profile 目录下执行
 cd ~/.dsh/profiles/desktop
