@@ -119,6 +119,21 @@ const openStore = async (
 
 const readJson = async (path: string): Promise<unknown> => JSON.parse(await readFile(path, "utf8")) as unknown;
 
+/**
+ * 造一个「已经存在的凭据文件」。
+ *
+ * 必须顺手 chmod 0600：FileBackend 会拒绝加载任何其他用户可读的凭据文件
+ * （那是它的安全属性之一），而 writeFile 的默认权限是 0644。Windows 上
+ * chmod 与属主校验都不生效，所以这行只在 POSIX 上有意义——不写它，测试就在
+ * 断言一个真实程序永远不会产生的状态。
+ */
+const writeExistingCredentials = async (dir: string, entries: Record<string, string>): Promise<string> => {
+  const file = join(dir, "credentials.json");
+  await writeFile(file, JSON.stringify({ version: 1, entries }) + "\n", "utf8");
+  await chmod(file, 0o600);
+  return file;
+};
+
 /** 文件后端下的状态：没有系统密码箱，密码明文落盘。 */
 const fileState = (overrides: Partial<SecurityState> = {}): SecurityState => ({
   mode: "plain",
@@ -190,11 +205,7 @@ describe("SecurityStore 首次运行（ensureStorage）", () => {
 
   it("不覆盖已有的凭据文件：老机器上只补 security.json", async () => {
     const { store, dir } = await openStore();
-    await writeFile(
-      join(dir, "credentials.json"),
-      JSON.stringify({ version: 1, entries: { "profile:web": "hunter2" } }) + "\n",
-      "utf8",
-    );
+    await writeExistingCredentials(dir, { "profile:web": "hunter2" });
     await store.load();
 
     await store.ensureStorage();
@@ -657,11 +668,7 @@ describe("SecurityStore 降级：密码箱此刻不可用", () => {
     const { store, dir } = await openStore({ backend: new BrokenKeychain() });
     await store.load();
     // 降级后的去处是文件后端：这里先放一条，模拟"降级前写进文件的那条"
-    await writeFile(
-      join(dir, "credentials.json"),
-      JSON.stringify({ version: 1, entries: { "profile:web": "hunter2" } }) + "\n",
-      "utf8",
-    );
+    await writeExistingCredentials(dir, { "profile:web": "hunter2" });
 
     expect(await store.get("profile:web")).toBe("hunter2");
 
