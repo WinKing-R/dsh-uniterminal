@@ -29,17 +29,21 @@ jobs:
     strategy:
       # 一个版本挂了，别把另一个版本的结果也藏起来。
       fail-fast: false
+      # Node 20 已于 2026-04 EOL，ubuntu-24.04 的 runner 对它支持在收缩
+      # （第一次跑时 "Use Node.js 20" 这一步就失败了）。测 22 与 24：都是 LTS，
+      # 且 24 与本机开发环境一致。engines 仍写 >=20，不影响老用户。
       matrix:
-        node: [20, 22]
+        node: [22, 24]
     steps:
       - uses: actions/checkout@v4
 
       # pnpm 必须在 setup-node 之前装好，否则 cache: pnpm 找不到它。
-      # 版本写死 11：lockfile 是 v9.0，用 12 会尝试迁移锁文件、把 CI 变成改仓库。
+      # 钉到**生成锁文件的那个确切版本**：写 11 会装 11.x 最新，
+      # 一旦它对 v9.0 锁文件的解析有差异，--frozen-lockfile 就会判"锁文件过期"。
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 11
+          version: 11.28.5
 
       - name: Use Node.js ${{ matrix.node }}
         uses: actions/setup-node@v4
@@ -54,7 +58,9 @@ jobs:
 
       # --frozen-lockfile：锁文件与 package.json 不一致时直接失败，而不是悄悄改锁文件。
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        # append-only：失败时日志按时间顺序直出，不被进度条覆盖，
+        # 也便于把关键几行贴出来排障。
+        run: pnpm install --frozen-lockfile --reporter=append-only
 
       - name: Typecheck
         run: pnpm typecheck
