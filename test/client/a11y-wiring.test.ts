@@ -223,6 +223,20 @@ describe("菜单的键盘入口", () => {
     // 不许在组件里另写一份"如果太靠右就减掉宽度"的算法（那就是第二套坐标了）。
     expect(body).toContain("menuAnchor(");
   });
+
+  it("左右两侧的坐标都必须接到组件上（漏一个菜单会跑到面板左下）", async () => {
+    const source = await read("../../src/client/HostListView.tsx");
+
+    // 【真机缺陷】menuAnchor 靠右时只返回 right，而两处 <ContextMenu> 曾只传了 left，
+    // 于是 left/right 全空 → absolute 元素退回**静态位置**，菜单贴在面板左下、和触发的那一行无关。
+    // 断言方式：每个 <ContextMenu 开标签里 left= 与 right= 必须成对出现。
+    const tags = source.split("<ContextMenu").slice(1).map((chunk) => chunk.slice(0, 260));
+    expect(tags.length).toBeGreaterThanOrEqual(2);
+    for (const tag of tags) {
+      expect(tag).toMatch(/left=\{\w+\.left\}/);
+      expect(tag).toMatch(/right=\{\w+\.right\}/);
+    }
+  });
 });
 
 /** 确认弹框：正文必须被念出来（只有标题时用户不知道这次要删的是哪一台）。 */

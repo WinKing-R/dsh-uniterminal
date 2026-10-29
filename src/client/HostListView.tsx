@@ -1426,7 +1426,10 @@ async function previewImport(): Promise<void> {
           if (target === undefined) return null;
           return (
             <ContextMenu
+              // left 与 right 互斥：锚点靠右时 menuAnchor 只给 right，
+              // 两个都必须接上——漏掉 right 会让 absolute 元素退回静态位置（菜单跑到面板左下）。
               left={menu.left}
+              right={menu.right}
               top={menu.top}
               // 可访问名：同一屏上有主机菜单与分组菜单，没有名字时读屏读不出这是谁的操作
               label={"主机 " + target.name + " 的操作"}
@@ -1458,6 +1461,7 @@ async function previewImport(): Promise<void> {
           return (
             <ContextMenu
               left={groupMenu.left}
+              right={groupMenu.right}
               top={groupMenu.top}
               label={"分组 " + node.path.join(" / ") + " 的操作"}
               returnFocusTo={groupMenu.trigger}
