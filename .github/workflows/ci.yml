@@ -1,0 +1,66 @@
+name: CI
+
+# 三道门禁与 prepublishOnly 完全一致：typecheck → test → build。
+# 本地跑过的才算数；这里只是让它在每台机器上、每次提交都被跑一遍。
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# 只读仓库内容，够用了：没有发布、没有写回。
+permissions:
+  contents: read
+
+# 同一分支连推几次时，取消上一轮，省额度。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: node ${{ matrix.node }}
+    # 只在 Linux 上跑：宿主半边与凭据存储的关键路径是 POSIX 语义
+    # （chmod 0600 属主校验、文件权限过宽即拒绝加载），这些在 Windows 上会被跳过。
+    # 需要 Windows 覆盖时再加一行到 matrix 即可。
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      # 一个版本挂了，别把另一个版本的结果也藏起来。
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm 必须在 setup-node 之前装好，否则 cache: pnpm 找不到它。
+      # 版本写死 11：lockfile 是 v9.0，用 12 会尝试迁移锁文件、把 CI 变成改仓库。
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Use Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: Versions
+        run: |
+          node --version
+          pnpm --version
+
+      # --frozen-lockfile：锁文件与 package.json 不一致时直接失败，而不是悄悄改锁文件。
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
