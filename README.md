@@ -56,6 +56,9 @@ dsh plugin --profile desktop add @winking-r/dsh-uniterminal@latest
 > **装的时候命令以退出码 1 结束、并打印 `Ignored build scripts: cpu-features, ssh2`，是预期现象**——包已经装好了，
 > 但自动登记可能被这一步打断。确认 `dsh.profile.bundles` 里有本包名，没有就手动加一行（见「故障排查」）。
 >
+> **profile 目录在工作区之外**：若你的会话按 `workspace-write` 沙箱运行（例如让 AI 代装），
+> 写 `~/.dsh/profiles/<名>/` 会被拒绝（`EPERM`）。放行一次全权限，或干脆自己在终端里跑那两条命令。
+>
 > 没装 `dsh` 命令，或者要装本地构建（`link:` / `tgz`）时，用下面的手动方式，效果等价。
 
 ### 手动方式（等价，两步）
@@ -80,6 +83,18 @@ pnpm add "file:<tgz 绝对路径>"
 ```
 
 重启 DSH。若右栏没有自动出现本插件，用右栏的 `+` 手动添加一个 `UniTerminal` 标签。
+
+### 装完怎么确认真的好了
+
+命令说"成功"不算数，**冷启动跑一次**才算。三条都能验，都不需要看源码：
+
+| 检查 | 怎么做 | 期望 |
+|---|---|---|
+| 宿主半边挂了 | 请求 `http://127.0.0.1:<DSH 的端口>/api/uniterminal/health` | `{"ok":true}` |
+| AI 工具注册了 | 问 AI 能不能列会话；或看 `~/.dsh/uniterminal/diag.log` 里的 `agent-tools.registered` 事件 | `uniterminal_list_sessions` 与 `uniterminal_exec` 都在 |
+| 凭据进了系统密码箱 | `~/.dsh/uniterminal/security.json` 的 `storage` 字段 | `keychain` 且 `degraded` 为 `false`（不是 `file`） |
+
+三条都对，就可以放心把密码交给它了。
 
 ### 右栏承载：官方 `sidebarRight` 或第三方 `DSH-better-sidebar`
 
