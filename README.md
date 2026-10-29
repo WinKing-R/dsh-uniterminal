@@ -7,6 +7,19 @@
 SSH / SFTP / 端口转发，挂在 DSH 右侧栏里。**一个侧边栏标签里装多条会话**（顶部会话栏切换；同一台主机连两次显示 `#2`），
 每条会话的终端、文件、隧道三视图并列。
 
+## 截图
+
+| 主机列表：分组 · 搜索 · 行内「测试 / 连接」，行尾 `⋯` 是其余操作 | 终端：一个侧边栏标签装多条会话，顶部会话栏切换（同一主机连两次显示 `#2`） |
+|---|---|
+| <img src="https://raw.githubusercontent.com/WinKing-R/dsh-uniterminal/main/docs/images/hosts.png" width="400"> | <img src="https://raw.githubusercontent.com/WinKing-R/dsh-uniterminal/main/docs/images/terminal.png" width="400"> |
+
+| 连接表单：记住的密码交给**操作系统密码箱** | SFTP：目录浏览、上传下载、进度 | 外观：字体、字号、行高、主题模式 |
+|---|---|---|
+| <img src="https://raw.githubusercontent.com/WinKing-R/dsh-uniterminal/main/docs/images/connect-form.png" width="260"> | <img src="https://raw.githubusercontent.com/WinKing-R/dsh-uniterminal/main/docs/images/sftp.png" width="260"> | <img src="https://raw.githubusercontent.com/WinKing-R/dsh-uniterminal/main/docs/images/appearance.png" width="260"> |
+
+> 截图使用演示数据（主机名 `demo01`–`demo03`，地址为 [RFC 5737](https://www.rfc-editor.org/rfc/rfc5737) 文档保留段 `192.0.2.0/24`）。
+> 图片用**绝对 URL** 引用：npm 页面不解析相对路径，相对写法在 npmjs.com 上会显示破图。
+
 ## 状态
 
 | 项 | 值 |
