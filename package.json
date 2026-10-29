@@ -1,6 +1,6 @@
 {
   "name": "@winking-r/dsh-uniterminal",
-  "version": "0.2.17",
+  "version": "0.2.18",
   "description": "在 DSH 右侧栏里提供 SSH 终端、SFTP 文件管理与端口转发的插件；密码交给操作系统密码箱保管，插件自身不实现加密。",
   "keywords": [
     "dsh",

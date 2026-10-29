@@ -6,6 +6,21 @@
 
 ## [Unreleased]
 
+## [0.2.18] - 2026-10-29
+
+纯文档版本，**代码与 0.2.17 完全相同**。
+
+### 文档
+
+- README 新增**截图**（主机列表 / 终端 / 连接表单 / SFTP / 外观）：演示数据为 `demo01`–`demo03` 与 RFC 5737 文档段 `192.0.2.0/24`；
+  图片经绝对 URL 引用，npm 页面同样能显示。
+- 安装说明改为**一条命令**：`dsh plugin --profile <profile 名> add @winking-r/dsh-uniterminal@latest`；
+  手工方式（`pnpm add` + 编辑 `dsh.profile.bundles`）作为备选保留。
+- **已知限制去掉开发日志式条目**：划掉的旧问题、「已解决（M4-x）」、里程碑编号、"已在真实服务器验证"这类记录都不再出现在用户文档里；
+  只保留用户实际会遇到的行为，凭据细节统一链到 [docs/SECURITY.md](docs/SECURITY.md)。
+- [SECURITY.md](docs/SECURITY.md) 同步去掉里程碑编号与历史叙述，改为陈述当前行为。
+- 新增 [CONTRIBUTING.md](CONTRIBUTING.md)：源码断言的约定、DOM 测试模板、CSS 契约。
+
 ## [0.2.17] - 2026-10-29
 
 ### 修复
@@ -52,6 +67,7 @@
 - 64 个测试文件 / 915 个用例（含 jsdom 真实交互用例）；`pnpm audit --prod` 零已知漏洞。
 - `prepublishOnly` 强制跑 typecheck + test + build，过不了发不出去。
 
-[Unreleased]: https://github.com/WinKing-R/dsh-uniterminal/compare/v0.2.17...HEAD
+[Unreleased]: https://github.com/WinKing-R/dsh-uniterminal/compare/v0.2.18...HEAD
+[0.2.18]: https://github.com/WinKing-R/dsh-uniterminal/compare/v0.2.17...v0.2.18
 [0.2.17]: https://github.com/WinKing-R/dsh-uniterminal/compare/v0.2.16...v0.2.17
 [0.2.16]: https://github.com/WinKing-R/dsh-uniterminal/releases/tag/v0.2.16
