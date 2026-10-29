@@ -40,7 +40,42 @@ SSH / SFTP / 端口转发，挂在 DSH 右侧栏里。**一个侧边栏标签里
 ## 安装
 
 前提：DSH `>=0.2.1-rc.2`（见本包 `package.json` 的 `dsh.engines`）、Node `>=20`。
-从源码装还需要 pnpm；用打好的 `tgz` 安装则**不需要**自己构建。
+
+### 一条命令（推荐）
+
+DSH 自带 CLI 会把「装包 + 登记到 profile」一步做完：
+
+```bash
+dsh plugin --profile desktop add @winking-r/dsh-uniterminal@latest
+```
+
+`--profile` 填你的 profile 名 —— `~/.dsh/profiles/` 下有哪些目录就用哪个（常见 `desktop` 或 `web`）。
+装完重启 DSH，右栏会出现 `UniTerminal` 标签。
+
+> 没装 `dsh` 命令，或者要装本地构建（`link:` / `tgz`）时，用下面的手动方式，效果等价。
+
+### 手动方式（等价，两步）
+
+```bash
+cd ~/.dsh/profiles/desktop
+
+# npm 上的正式包
+pnpm add @winking-r/dsh-uniterminal
+
+# 或者：改代码即生效（开发用）
+pnpm add "link:<本仓库绝对路径>"
+
+# 或者：装打包好的 tgz（不需要自己构建）
+pnpm add "file:<tgz 绝对路径>"
+```
+
+然后在 `~/.dsh/profiles/desktop/package.json` 的 `dsh.profile.bundles` 数组里追加一行本包名：
+
+```json
+"@winking-r/dsh-uniterminal"
+```
+
+重启 DSH。若右栏没有自动出现本插件，用右栏的 `+` 手动添加一个 `UniTerminal` 标签。
 
 ### 右栏承载：官方 `sidebarRight` 或第三方 `DSH-better-sidebar`
 
@@ -52,30 +87,8 @@ SSH / SFTP / 端口转发，挂在 DSH 右侧栏里。**一个侧边栏标签里
 | 只有官方 `@deepseek-ai/dsh-client-ui-sidebar-right` | `ctx.sidebarRightTabs` | 回落到官方右栏标签 |
 
 两种都能用；**没有 better-sidebar 也能跑**（会自动回落）。
-若右栏始终不出现本插件，先确认这两者至少有一个已启用——诊断见
+若右栏始终不出现本插件，先确认这两者至少有一个已启用 —— 诊断见
 [`docs/acceptance-m0.md`](docs/acceptance-m0.md)（`target=none` 表示两套注册表都不可用）。
-
-```bash
-# 在 DSH 的 desktop profile 目录下执行
-cd ~/.dsh/profiles/desktop
-
-# 方式一：从 npm 安装（推荐，不需要 Node 工具链）
-pnpm add @winking-r/dsh-uniterminal
-
-# 方式二：从源码链接（改代码即生效，开发用）
-pnpm add "link:<你的本仓库绝对路径>"
-
-# 方式三：从目录安装（用打包好的 tgz）
-pnpm add "file:<tgz 的绝对路径>"
-```
-
-然后在 `~/.dsh/profiles/desktop/package.json` 的 `dsh.profile.bundles` 数组里追加一行本包名：
-
-```json
-"@winking-r/dsh-uniterminal"
-```
-
-重启 DSH。若右栏没有自动出现本插件，用右栏的 `+` 手动添加一个 `UniTerminal` 标签。
 
 > **改动代码后必须重启 DSH**：宿主半边（`lib/index.js`）在启动时加载，硬刷新页面不会生效。
 
